@@ -35,3 +35,13 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.db
+*.db-shm
+*.db-wal
