@@ -22,6 +22,11 @@ def test_create_task_400_invalid_status(client):
     assert res.status_code == 400
 
 
+def test_create_task_400_invalid_due_at(client):
+    res = client.post("/api/tasks", json={"title": "테스트", "due_at": "not-a-date"})
+    assert res.status_code == 400
+
+
 def test_list_tasks_200(client):
     client.post("/api/tasks", json={"title": "태스크 1"})
     client.post("/api/tasks", json={"title": "태스크 2"})
@@ -47,6 +52,11 @@ def test_get_task_404(client):
     assert res.status_code == 404
 
 
+def test_get_task_400_invalid_id(client):
+    res = client.get("/api/tasks/abc")
+    assert res.status_code == 400
+
+
 def test_update_task_200_partial(client):
     created = client.post("/api/tasks", json={"title": "수정 전 제목"}).json()
     res = client.put(f"/api/tasks/{created['id']}", json={"status": "in_progress"})
@@ -61,6 +71,12 @@ def test_update_task_404(client):
     assert res.status_code == 404
 
 
+def test_update_task_400_invalid_status(client):
+    created = client.post("/api/tasks", json={"title": "테스트"}).json()
+    res = client.put(f"/api/tasks/{created['id']}", json={"status": "invalid"})
+    assert res.status_code == 400
+
+
 def test_delete_task_204(client):
     created = client.post("/api/tasks", json={"title": "삭제 태스크"}).json()
     res = client.delete(f"/api/tasks/{created['id']}")
@@ -70,3 +86,8 @@ def test_delete_task_204(client):
 def test_delete_task_404(client):
     res = client.delete("/api/tasks/9999")
     assert res.status_code == 404
+
+
+def test_delete_task_400_invalid_id(client):
+    res = client.delete("/api/tasks/abc")
+    assert res.status_code == 400
