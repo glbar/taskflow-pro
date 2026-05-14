@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>TaskFlow Pro</title>
+  <!-- 테마 초기화 — FOUC 방지를 위해 body보다 먼저 실행 -->
+  <script>
+    const _saved = localStorage.getItem('theme');
+    const _preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if ((_saved ?? _preferred) === 'dark') document.documentElement.classList.add('dark');
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-950 min-h-screen transition-colors duration-200"
+  style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+
+  <!-- 헤더 -->
+  <header class="sticky top-0 z-40 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+    <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+      <h1 class="text-lg font-semibold text-gray-900 dark:text-white tracking-tight">TaskFlow Pro</h1>
+      <button id="themeToggle"
+        class="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+        aria-label="테마 전환">
+        <!-- 다크 모드에서 표시 (sun) -->
+        <svg id="iconSun" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+        </svg>
+        <!-- 라이트 모드에서 표시 (moon) -->
+        <svg id="iconMoon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- 태스크 추가 폼 -->
+    <section class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/60 dark:border-gray-700/60 p-5">
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">새 태스크</h2>
+      <form id="addForm" class="space-y-3">
+        <input id="addTitle" type="text" placeholder="태스크 제목 *" maxlength="200" required
+          class="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"/>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="addDueAt" type="datetime-local"
+            class="flex-1 h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"/>
+          <select id="addStatus"
+            class="h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+            <option value="todo">Todo</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+          <button type="submit"
+            class="h-11 px-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl transition-colors shadow-sm whitespace-nowrap">
+            추가
+          </button>
+        </div>
+        <p id="addError" class="text-sm text-red-500 hidden"></p>
+      </form>
+    </section>
+
+    <!-- 태스크 목록 -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">태스크 목록</h2>
+        <span id="taskCount" class="text-xs text-gray-400 dark:text-gray-600"></span>
+      </div>
+      <div id="taskList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
+  </main>
+
+  <!-- 수정 모달 -->
+  <div id="editModal" class="fixed inset-0 z-50 hidden">
+    <div id="editBackdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+    <div class="relative flex items-center justify-center min-h-full p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200/60 dark:border-gray-700/60">
+        <div class="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <h3 class="font-semibold text-gray-900 dark:text-white">태스크 수정</h3>
+        </div>
+        <div class="p-5 space-y-3">
+          <input id="editTitle" type="text" placeholder="제목 *" maxlength="200"
+            class="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"/>
+          <textarea id="editDescription" placeholder="설명 (선택)" rows="3"
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-none"></textarea>
+          <div class="flex gap-3">
+            <input id="editDueAt" type="datetime-local"
+              class="flex-1 h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"/>
+            <select id="editStatus"
+              class="h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+              <option value="todo">Todo</option>
+              <option value="in_progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <p id="editError" class="text-sm text-red-500 hidden"></p>
+        </div>
+        <div class="px-5 pb-5 flex gap-3">
+          <button id="editSaveBtn"
+            class="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors">저장</button>
+          <button id="editCancelBtn"
+            class="flex-1 h-11 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors">취소</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 삭제 확인 모달 -->
+  <div id="deleteModal" class="fixed inset-0 z-50 hidden">
+    <div id="deleteBackdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+    <div class="relative flex items-center justify-center min-h-full p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200/60 dark:border-gray-700/60 p-6">
+        <h3 class="font-semibold text-gray-900 dark:text-white mb-2">태스크 삭제</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">이 태스크를 삭제하시겠습니까? 되돌릴 수 없습니다.</p>
+        <div class="flex gap-3">
+          <button id="deleteConfirmBtn"
+            class="flex-1 h-11 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl transition-colors">삭제</button>
+          <button id="deleteCancelBtn"
+            class="flex-1 h-11 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors">취소</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
