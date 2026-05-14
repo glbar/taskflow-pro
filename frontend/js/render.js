@@ -73,6 +73,7 @@ export function renderCards(tasks, { onEdit, onDelete }) {
         </div>
         <h3 class="text-sm font-medium text-gray-900 dark:text-white leading-snug mb-2">${escapeHtml(task.title)}</h3>
         ${due ? `<p class="text-xs font-mono ${isOverdue ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}">⏰ ${due}</p>` : ''}
+        <p class="text-xs text-gray-300 dark:text-gray-600 mt-2">${dayjs(task.created_at).fromNow()}</p>
       </div>`;
   }).join('');
 
